@@ -1,8 +1,11 @@
 # PolyADOTool
 
-A small command-line tool for Azure DevOps features that are only accessible through the REST API, not the UI. Written in PowerShell, no dependencies beyond PowerShell 5.1+ / PowerShell Core.
+A small command-line tool for Azure DevOps features that are only accessible through the REST API, not the UI.
 
-Current tool: **`Ado-TestRunTool.ps1`** — delete test runs (including linked test outcomes) and export test run lists. For daily use, see the pre-filled launcher **`Example-Run.ps1`**.
+- **Windows:** PowerShell version, no dependencies beyond PowerShell 5.1+ / PowerShell Core.
+- **macOS / Linux:** Bash version, needs only `bash`, `curl` and `jq` (all preinstalled on macOS; `jq` via `brew install jq` / `apt install jq` on Linux).
+
+Current tool: **`Ado-TestRunTool.ps1`** / **`Ado-TestRunTool.sh`** — delete test runs (including linked test outcomes) and export test run lists. For daily use, see the pre-filled launchers **`Example-Run.ps1`** / **`Example-Run.sh`**. Both versions have the same features and flags (see [Parity](#parity-between-the-powershell-and-bash-versions)).
 
 ## Features
 
@@ -58,6 +61,49 @@ $env:AZURE_DEVOPS_PAT = "<your PAT>"
 ```
 
 > The PAT is only read from the environment (`AZURE_DEVOPS_PAT`, fallback `AZDO_PAT`) and is never stored, logged, or written by the script. Each colleague uses their own PAT.
+
+### macOS / Linux: `Ado-TestRunTool.sh` / `Example-Run.sh`
+
+The Bash port is feature-identical to the PowerShell version (same menu, flags, CSV columns, paging and verification). Requirements: `bash` (the macOS default 3.2 works), `curl`, `jq`.
+
+```bash
+# One-time setup: create a PAT with the "Test (read & write)" scope
+# https://learn.microsoft.com/en-us/azure/devops/organizations/accounts/use-personal-access-tokens-to-authenticate
+export AZURE_DEVOPS_PAT="<your PAT>"
+
+# Interactive
+./Ado-TestRunTool.sh -o myorg -p myproject
+
+# Delete a specific run directly
+./Ado-TestRunTool.sh -o myorg -p myproject -r 1234 -f
+
+# Export all runs to CSV directly
+./Ado-TestRunTool.sh -o myorg -p myproject -l -O /tmp/runs.csv
+
+# Pre-filled launcher (edit Example-Run.sh once, then just run it)
+./Example-Run.sh                     # interactive menu; prompts for the PAT if unset
+./Example-Run.sh -r 1234 -f          # extra arguments are forwarded to the tool
+```
+
+Flags: `-o/-Organization`, `-p/-Project`, `-r/-RunId`, `-l/-ListRuns`, `-O/-OutputPath`, `-f/-Force`, `-w/-WhatIf`, `-h/-Help` (long `--...` forms also work). The PAT is only read from `AZURE_DEVOPS_PAT` (fallback `AZDO_PAT`); `Example-Run.sh` prompts for it with hidden input and exports it for the current shell only — never written to disk.
+
+#### Set the PAT permanently (optional)
+
+Instead of exporting `AZURE_DEVOPS_PAT` in every terminal, add it once to your shell's startup file — every new terminal then has it, and `Example-Run.sh` skips the prompt:
+
+```bash
+# macOS (default shell is zsh)          # Linux (default shell is bash)
+echo 'export AZURE_DEVOPS_PAT="<your PAT>"' >> ~/.zshrc
+echo 'export AZURE_DEVOPS_PAT="<your PAT>"' >> ~/.bashrc
+```
+
+- Use `~/.zshrc` on macOS (zsh is the default shell since Catalina), `~/.bash_profile` on older macOS versions still using bash, and `~/.bashrc` on most Linux distributions (`~/.zshrc` there too if you run zsh).
+- Open a new terminal afterwards, or run `source ~/.zshrc` / `source ~/.bashrc` in the current one.
+- The line lives only in your home directory and is never committed to this repo — but note it is stored in plaintext there. If you prefer, keep the PAT in your OS keychain/credential manager and have the startup file export it from there instead.
+
+## Parity between the PowerShell and Bash versions
+
+Yes — functionality is the same: identical interactive menu, identical non-interactive flags (`-RunId`/`-ListRuns`/`-OutputPath`/`-Force`/`-WhatIf`), identical REST calls with API version 7.1, identical paging (pages of 1000), identical CSV columns, identical delete-then-verify-404 behavior, and identical PAT-from-environment-only handling. Only cosmetic platform differences remain: the confirmation prompt is a plain `y/N` (the PowerShell `ShouldProcess` prompt for this high-impact action also defaults to "No"), colors follow the terminal/`NO_COLOR`, and the CSV uses LF line endings instead of CRLF.
 
 ## Design choices
 
