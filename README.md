@@ -2,7 +2,7 @@
 
 A small command-line tool for Azure DevOps features that are only accessible through the REST API, not the UI. Written in PowerShell, no dependencies beyond PowerShell 5.1+ / PowerShell Core.
 
-Current tool: **`Ado-TestRunTool.ps1`** — delete test runs (including linked test outcomes) and export test run lists.
+Current tool: **`Ado-TestRunTool.ps1`** — delete test runs (including linked test outcomes) and export test run lists. For daily use, see the pre-filled launcher **`Example-Run.ps1`**.
 
 ## Features
 
@@ -25,6 +25,22 @@ Azure DevOps has no UI for deleting a test run, and deleted runs clutter reports
 - **Non-interactive** for scripting/CI: `-RunId <id>` deletes directly, `-ListRuns` exports directly.
 
 ## Usage
+
+### Quick start: `Example-Run.ps1` (recommended for daily use)
+
+If you work on the same project most of the time, open **`Example-Run.ps1`** once, set `$Organization` and `$Project` at the top, and from then on just run:
+
+```powershell
+.\Example-Run.ps1                     # interactive menu
+.\Example-Run.ps1 -RunId 1234 -Force  # extra arguments are forwarded to the tool
+.\Example-Run.ps1 -ListRuns           # e.g. -RunId / -ListRuns / -OutputPath
+```
+
+On the first run in a window you are prompted for your PAT with secure (non-echoing) input; it is set as `AZURE_DEVOPS_PAT` for the current session only and never written to disk, so it cannot be committed by accident. Later runs in the same window skip the prompt. To skip the prompt in every window, set `$env:AZURE_DEVOPS_PAT` yourself in your `$PROFILE`.
+
+> If Windows refuses to run scripts ("running scripts is disabled"), run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
+
+### Direct usage
 
 ```powershell
 # One-time setup: create a PAT with the "Test (read & write)" scope
