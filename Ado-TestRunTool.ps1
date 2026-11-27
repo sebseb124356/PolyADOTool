@@ -11,7 +11,7 @@
           (which cascades to results/attachments), then verifies both the
           run and its results are gone (404).
       [2] List test runs    - fetches all test runs (paged) and saves them
-          as a timestamped CSV next to the script (or to -OutputPath).
+          as a timestamped CSV in the current directory (or to -OutputPath).
       [Q] Quit.
 
     Authentication uses a Personal Access Token (PAT) read from the
@@ -21,6 +21,9 @@
 .EXAMPLE
     $env:AZURE_DEVOPS_PAT = "<your PAT>"
     .\Ado-TestRunTool.ps1 -Organization myorg -Project myproject
+
+    # Pre-filled launcher (edit Example-Run.ps1 once, then just run it)
+    .\Example-Run.ps1
 
     # Non-interactive: delete a run directly
     .\Ado-TestRunTool.ps1 -Organization myorg -Project myproject -RunId 1234
@@ -50,7 +53,7 @@ param(
     # Non-interactive: export run list (skips the menu)
     [switch]$ListRuns,
 
-    # Where to save the run list export (default: script folder)
+    # Where to save the run list export (default: current directory)
     [string]$OutputPath,
 
     # Skip the interactive confirmation before deleting
@@ -87,7 +90,12 @@ function Invoke-AdoRest {
 
 function Test-Gone {
     param([string]$Uri)
-    try { Invoke-AdoRest -Method Get -Uri $Uri | Out-Null; return $false } catch { return $true }
+    try { Invoke-AdoRest -Method Get -Uri $Uri | Out-Null; return $false }
+    catch {
+        $t = $_.TargetObject
+        if ($t -and $t.PSObject.Properties['StatusCode'] -and [int]$t.StatusCode -eq 404) { return $true }
+        return $false
+    }
 }
 
 # ============================================================================
@@ -140,15 +148,19 @@ function Remove-TestRun {
             }
         }
         else {
-            Write-Host "Cancelled. Nothing was deleted." -ForegroundColor Yellow
+            if ($WhatIfPreference) { Write-Host "WhatIf: nothing was deleted." }
+            else { Write-Host "Cancelled. Nothing was deleted." -ForegroundColor Yellow }
         }
     }
     catch {
-        if ($_.TargetObject -and $_.TargetObject.StatusCode) {
-            $code = $_.TargetObject.StatusCode
+        $t = $_.TargetObject
+        if ($t -and $t.PSObject.Properties['StatusCode']) {
+            $code = [int]$t.StatusCode
             if ($code -eq 404) { Write-Error "Run #$TargetRunId not found (404) in $Organization/$Project." }
             elseif ($code -eq 401) { Write-Error "Unauthorized (401). Check the PAT and its Test (read & write) scope." }
-            else { Write-Error "Azure DevOps returned HTTP $code. $($_.TargetObject.Message)" }
+            elseif ($code -eq 403) { Write-Error "Forbidden (403). The PAT lacks access: check the Test (read & write) scope and your permissions on $Organization/$Project." }
+            elseif ($code -eq 0) { Write-Error "No HTTP response from Azure DevOps (connectivity/DNS/TLS). $($t.Message)" }
+            else { Write-Error "Azure DevOps returned HTTP $code. $($t.Message)" }
         }
         else { Write-Error $_ }
     }
