@@ -87,6 +87,20 @@ export AZURE_DEVOPS_PAT="<your PAT>"
 
 Flags: `-o/-Organization`, `-p/-Project`, `-r/-RunId`, `-l/-ListRuns`, `-O/-OutputPath`, `-f/-Force`, `-w/-WhatIf`, `-h/-Help` (long `--...` forms also work). The PAT is only read from `AZURE_DEVOPS_PAT` (fallback `AZDO_PAT`); `Example-Run.sh` prompts for it with hidden input and exports it for the current shell only — never written to disk.
 
+#### Set the PAT permanently (optional)
+
+Instead of exporting `AZURE_DEVOPS_PAT` in every terminal, add it once to your shell's startup file — every new terminal then has it, and `Example-Run.sh` skips the prompt:
+
+```bash
+# macOS (default shell is zsh)          # Linux (default shell is bash)
+echo 'export AZURE_DEVOPS_PAT="<your PAT>"' >> ~/.zshrc
+echo 'export AZURE_DEVOPS_PAT="<your PAT>"' >> ~/.bashrc
+```
+
+- Use `~/.zshrc` on macOS (zsh is the default shell since Catalina), `~/.bash_profile` on older macOS versions still using bash, and `~/.bashrc` on most Linux distributions (`~/.zshrc` there too if you run zsh).
+- Open a new terminal afterwards, or run `source ~/.zshrc` / `source ~/.bashrc` in the current one.
+- The line lives only in your home directory and is never committed to this repo — but note it is stored in plaintext there. If you prefer, keep the PAT in your OS keychain/credential manager and have the startup file export it from there instead.
+
 ## Parity between the PowerShell and Bash versions
 
 Yes — functionality is the same: identical interactive menu, identical non-interactive flags (`-RunId`/`-ListRuns`/`-OutputPath`/`-Force`/`-WhatIf`), identical REST calls with API version 7.1, identical paging (pages of 1000), identical CSV columns, identical delete-then-verify-404 behavior, and identical PAT-from-environment-only handling. Only cosmetic platform differences remain: the confirmation prompt is a plain `y/N` (the PowerShell `ShouldProcess` prompt for this high-impact action also defaults to "No"), colors follow the terminal/`NO_COLOR`, and the CSV uses LF line endings instead of CRLF.
